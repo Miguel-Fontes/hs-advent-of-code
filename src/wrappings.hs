@@ -5,12 +5,19 @@ wrappingList = do
     contents <- readFile "wrappings-list.txt"
     let list = map (parseStrListToInt . splitStringAt 'x') $ lines contents
         totalWrapping = sum $ map wrappingSize list
-    putStrLn $ show totalWrapping
+        totalRibbon = sum $ map ribbonSize list
+    putStrLn $ "Total Wrapping: " ++ show totalWrapping
+    putStrLn $ "Total Ribbon:   " ++ show totalRibbon
 
 wrappingSize :: [Int] -> Int
 wrappingSize [l, w, h] = (+extra) . sum $ map (*2) areas
     where areas = [l*w, w*h, h*l]
           extra = minimum areas
+
+ribbonSize :: [Int] -> Int
+ribbonSize [l, w, h] = volume + perimeter
+    where perimeter = minimum [l+w, w+h, h+l] * 2
+          volume = l * w * h
 
 parseStrToInt :: String -> Int
 parseStrToInt = read
