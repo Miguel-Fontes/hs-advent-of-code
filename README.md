@@ -2,7 +2,7 @@
 Soluções para os desafios propostos em [Advent of Code](http://adventofcode.com/)
 
 - 1 - **
-- 2 - *
+- 2 - **
 - 3
 - 4
 - 5
