@@ -1,55 +1,86 @@
 -- file: delivery.hs
 import Data.Maybe
 
--- Houses
-data House = House ((Int, Int), Int) deriving (Show)
+-- Houses ---------------------------------------------------------------------------------
+data House = House { presents :: Int } deriving (Show)
 
-getX :: House -> Int
-getX (House ((x, _),  _)) = x
+incPresents :: House -> House
+incPresents (House p) = House (p + 1)
 
-getY :: House -> Int
-getY (House ((_, y), _)) = y
+makeHouse :: House
+makeHouse = House 0
 
-getPresents :: House -> Int
-getPresents (House ((_, _), n)) = n
+-- Coords ---------------------------------------------------------------------------------
+type Coords = (Int, Int)
 
-buildHouse :: Int -> Int -> Int -> House
-buildHouse x y p = House ((x, y), p)
+-- Construtor
+makeCoords :: Int -> Int -> Coords
+makeCoords x y = (x,y)
 
--- Grid
-data Grid = Grid [House] deriving (Show)
+-- Selectors
+getX :: Coords -> Int
+getX coords = fst coords
 
-getCurrent :: Grid -> House
-getCurrent (Grid xs) = head xs
+getY :: Coords -> Int
+getY coords = snd coords
 
-addToGrid :: House -> Grid -> Grid
-addToGrid h (Grid xs) = Grid $ h:xs
+-- Operations
+incX :: Coords -> Coords
+incX coords = (getX coords + 1, getY coords)
 
-updateGrid :: (Int, Int) -> Grid -> Grid
-updateGrid position g
-    | wasVisited position g = addToGrid (buildHouse (fst destination) (snd destination) (presents + 1)) g
-    | otherwise = addToGrid (buildHouse (fst destination) (snd destination) 0) g
-        where pos = getCurrent g
-              destination = (getX pos, inc $ getY pos)
-              existingHousePresents = getPresents $ lookup' position g
-              (presents) = existingHousePresents
+decX :: Coords -> Coords
+decX coords = (getX coords - 1, getY coords)
 
-wasVisited :: (Int, Int) -> Grid -> Bool
-wasVisited (x, y) (Grid xs) = foldl (\acc h -> if getX h == x && getY h == y  then True else acc) False xs
+incY :: Coords -> Coords
+incY coords = (getX coords, getY coords + 1)
 
-lookup' :: (Int, Int) -> Grid -> Maybe House
-lookup' (x, y) (Grid xs) = foldl (\acc h -> if getX h == x && getY h == y  then Just h else acc ) Nothing xs
+decY :: Coords -> Coords
+decY coords = (getX coords, getY coords - 1)
 
-removeFromGrid :: (Int, Int) -> Grid -> Grid
-removeFromGrid (x, y) (Grid xs) = Grid . reverse $ foldl (\acc h -> if getX h == x && getY h == y  then acc else h:acc ) [] xs
+-- Grid -----------------------------------------------------------------------------------
+data Grid a = Grid [(Coords, a)] deriving (Show)
 
-moveUp :: Grid -> Grid
-moveUp g
-    | wasVisited destination g = g
-    | otherwise = addToGrid (buildHouse (fst destination) (snd destination) 0) g
-    where pos = getCurrent g
-          destination = (getX pos, inc $ getY pos)
+-- Construtor
+makeGrid :: Coords -> a -> Grid a
+makeGrid coords x = Grid [(coords, x)]
 
+-- Selectors
+getCoords :: (Coords, a) -> Coords
+getCoords (coords, _) = coords
+
+getValue :: (Coords, a) -> a
+getValue (_, a) = a
+
+-- Operations
+coordExists :: Coords -> Grid a -> Bool
+coordExists pos (Grid xs) = if isNothing (lookup pos xs)  then False else True
+
+updateValue :: Coords -> (a -> a) -> a -> Grid a -> Grid a
+updateValue coords f valueBuilder (Grid xs)
+    | coordExists coords (Grid xs) = Grid $ foldl (\acc x -> if getCoords x == coords
+                                                   then (getCoords x, f $ getValue x) : acc
+                                                   else x : acc) [] xs
+    | otherwise = updateValue coords f valueBuilder (Grid $ (coords, valueBuilder) : xs)
+
+moveUp :: Coords -> Coords
+moveUp coords = incY coords
+
+moveRight :: Coords -> Coords
+moveRight coords = incX coords
+
+moveDown :: Coords -> Coords
+moveDown coords = decY coords
+
+moveLeft :: Coords -> Coords
+moveLeft coords = decX coords
+
+--moveUp :: Grid -> Grid
+--moveUp g
+--    | wasVisited destination g = g
+--    | otherwise = addToGrid (buildHouse (fst destination) (snd destination) 0) g
+--    where pos = getCurrent g
+--          destination = (getX pos, inc $ getY pos)
+--
 --moveTo :: Char -> Grid -> Grid
 --moveTo x g
 --    | x == '^' = addToGrid (buildHouse (getX current) (inc $ getY current) (inc $ getPresents current)) g
@@ -57,9 +88,3 @@ moveUp g
 --    | x == 'v' = addToGrid (buildHouse (getX current) (dec $ getY current) (inc $ getPresents current)) g
 --    | x == '>' = addToGrid (buildHouse (inc $ getX current) (getY current) (inc $ getPresents current)) g
 --        where current = getCurrent g
-
-inc :: Int -> Int
-inc x = x + 1
-
-dec :: Int -> Int
-dec x =  x - 1
