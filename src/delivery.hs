@@ -1,5 +1,6 @@
 -- file: delivery.hs
 import Data.Maybe
+import Data.List
 
 -- Houses ---------------------------------------------------------------------------------
 data House = House { presents :: Int } deriving (Show)
@@ -37,30 +38,39 @@ incY coords = (getX coords, getY coords + 1)
 decY :: Coords -> Coords
 decY coords = (getX coords, getY coords - 1)
 
+-- Point ----------------------------------------------------------------------------------
+data Point a = Point (Coords, a) deriving (Show)
+
+instance Eq (Point a) where
+    Point (a, _) == Point (b, _) = a == b
+
+makePoint :: Coords -> a -> Point a
+makePoint (x, y) z = Point ((x,y), z)
+
+getCoords :: Point a -> Coords
+getCoords (Point (coords, _)) = coords
+
+getValue :: Point a -> a
+getValue (Point (_, a)) = a
+
+
 -- Grid -----------------------------------------------------------------------------------
-data Grid a = Grid [(Coords, a)] deriving (Show)
+data Grid a = Grid [Point a] deriving (Show)
 
 -- Construtor
-makeGrid :: Coords -> a -> Grid a
-makeGrid coords x = Grid [(coords, x)]
+makeGrid :: Point a -> Grid a
+makeGrid point = Grid [point]
 
--- Selectors
-getCoords :: (Coords, a) -> Coords
-getCoords (coords, _) = coords
 
-getValue :: (Coords, a) -> a
-getValue (_, a) = a
+coordExists :: Point a -> Grid a -> Bool
+coordExists point (Grid xs) = foldl (\acc x -> if x == point then True else acc) False xs
 
--- Operations
-coordExists :: Coords -> Grid a -> Bool
-coordExists pos (Grid xs) = if isNothing (lookup pos xs)  then False else True
-
-updateValue :: Coords -> (a -> a) -> a -> Grid a -> Grid a
-updateValue coords f valueBuilder (Grid xs)
-    | coordExists coords (Grid xs) = Grid $ foldl (\acc x -> if getCoords x == coords
-                                                   then (getCoords x, f $ getValue x) : acc
-                                                   else x : acc) [] xs
-    | otherwise = updateValue coords f valueBuilder (Grid $ (coords, valueBuilder) : xs)
+updateValue :: Point a -> (a -> a) -> a -> Grid a -> Grid a
+updateValue point f valConstructor (Grid xs)
+    | coordExists point (Grid xs) = Grid $ foldl (\acc x -> if x == point
+                                                            then makePoint (getCoords point) (f $ getValue x) : acc
+                                                            else x : acc) [] xs
+    | otherwise = updateValue point f valConstructor (Grid $ makePoint (getCoords point) valConstructor : xs)
 
 moveUp :: Coords -> Coords
 moveUp coords = incY coords
@@ -77,19 +87,41 @@ moveLeft coords = decX coords
 countValues :: Grid a -> Int
 countValues (Grid xs) = length xs
 
+mergeGrids :: Grid a -> Grid a -> Grid a
+mergeGrids (Grid ga) (Grid gb) = Grid $ union ga gb
+
 -- Day 3
 delivery :: IO()
 delivery = do
     input <- readFile "delivery-directions.txt"
-    let grid = makeGrid (0, 0) (House 1)
-        current = makeCoords 0 0
-        presentsGrid = dropPresents current grid input
+    let startingPoint = makePoint (0, 0) (House 1)
+        grid = makeGrid startingPoint
+        presentsGrid = dropPresents startingPoint grid input
     putStrLn $ show (countValues presentsGrid)
 
-dropPresents :: Coords -> Grid House -> String -> Grid House
+-- Day 3 - Part Two
+robotDelivery :: IO()
+robotDelivery = do
+    input <- readFile "delivery-directions.txt"
+    let startingPoint = makePoint (0, 0) (House 1)
+        grid = makeGrid startingPoint
+        santaInput = splitDirections input 0 -- 0 para começar dos pares
+        robotInput = splitDirections input 1 -- 1 para começar dos ímpares
+        santaPresentsGrid = dropPresents startingPoint grid santaInput
+        robotPresentsGrid = dropPresents startingPoint grid robotInput
+    putStrLn $ show ("Santa Input: " ++ (show $ length santaInput))
+    putStrLn $ show ("Robot Input: " ++ (show $ length robotInput))
+    putStrLn $ show ("Total Input: " ++ (show $ length input))
+    putStrLn $ show (countValues santaPresentsGrid)
+    putStrLn $ show (countValues robotPresentsGrid)
+    putStrLn $ show (countValues robotPresentsGrid + countValues santaPresentsGrid)
+    putStrLn $ show (countValues $ mergeGrids santaPresentsGrid robotPresentsGrid)
+
+dropPresents :: Point House -> Grid House -> String -> Grid House
 dropPresents _ g [] = g
-dropPresents coords g (x:xs) = dropPresents destination (updateValue destination incPresents makeHouse g) xs
-    where destination = moveTo x coords
+dropPresents currPoint g (x:xs) = dropPresents destination updatedGrid xs
+    where destination = makePoint (moveTo x (getCoords currPoint)) makeHouse
+          updatedGrid = updateValue destination incPresents makeHouse g
 
 moveTo :: Char -> Coords -> Coords
 moveTo x current
@@ -97,3 +129,8 @@ moveTo x current
     | x == '<' = moveLeft current
     | x == 'v' = moveDown current
     | x == '>' = moveRight current
+
+splitDirections :: String -> Int -> String
+splitDirections (x:xs) n = x : splitIter n xs
+    where splitIter _ [] = []
+          splitIter n (x:xs) = if even n then splitIter (n+1) xs else x : splitIter (n+1) xs
