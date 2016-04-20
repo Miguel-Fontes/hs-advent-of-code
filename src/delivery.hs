@@ -25,7 +25,6 @@ robotDelivery = do
     putStrLn $ show ("Just like delivery but... with a Robot")
     putStrLn $ show ("Total houses visited: " ++ show (countValues $ mergeGrids santaPresentsGrid robotPresentsGrid))
 
-
 -- Helpers
 -- dropPresents => Executa a lógica de entregar os presentes de acordo com os caracteres
 -- lidos do arquivo com as instruções de direções. Recebe um Point inicial para começar
@@ -117,7 +116,6 @@ data Grid a = Grid [Point a] deriving (Show)
 -- Construtor
 makeGrid :: Point a -> Grid a
 makeGrid point = Grid [point]
-
 
 -- Operations
 moveUp :: Coords -> Coords
