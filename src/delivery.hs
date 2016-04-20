@@ -74,17 +74,26 @@ moveDown coords = decY coords
 moveLeft :: Coords -> Coords
 moveLeft coords = decX coords
 
---moveUp :: Grid -> Grid
---moveUp g
---    | wasVisited destination g = g
---    | otherwise = addToGrid (buildHouse (fst destination) (snd destination) 0) g
---    where pos = getCurrent g
---          destination = (getX pos, inc $ getY pos)
---
---moveTo :: Char -> Grid -> Grid
---moveTo x g
---    | x == '^' = addToGrid (buildHouse (getX current) (inc $ getY current) (inc $ getPresents current)) g
---    | x == '<' = addToGrid (buildHouse (dec $ getX current) (getY current) (inc $ getPresents current)) g
---    | x == 'v' = addToGrid (buildHouse (getX current) (dec $ getY current) (inc $ getPresents current)) g
---    | x == '>' = addToGrid (buildHouse (inc $ getX current) (getY current) (inc $ getPresents current)) g
---        where current = getCurrent g
+countValues :: Grid a -> Int
+countValues (Grid xs) = length xs
+
+-- Day 3
+delivery :: IO()
+delivery = do
+    input <- readFile "delivery-directions.txt"
+    let grid = makeGrid (0, 0) (House 1)
+        current = makeCoods 0 0
+        presentsGrid = dropPresents current grid input
+    putStrLn $ show (countValues presentsGrid)
+
+dropPresents :: Coords -> Grid House -> String -> Grid House
+dropPresents _ g [] = g
+dropPresents coords g (x:xs) = dropPresents destination (updateValue destination incPresents makeHouse g) xs
+    where destination = moveTo x coords
+
+moveTo :: Char -> Coords -> Coords
+moveTo x current
+    | x == '^' = moveUp current
+    | x == '<' = moveLeft current
+    | x == 'v' = moveDown current
+    | x == '>' = moveRight current
