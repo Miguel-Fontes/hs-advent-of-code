@@ -82,7 +82,7 @@ delivery :: IO()
 delivery = do
     input <- readFile "delivery-directions.txt"
     let grid = makeGrid (0, 0) (House 1)
-        current = makeCoods 0 0
+        current = makeCoords 0 0
         presentsGrid = dropPresents current grid input
     putStrLn $ show (countValues presentsGrid)
 
