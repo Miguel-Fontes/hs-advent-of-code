@@ -53,7 +53,6 @@ splitDirections n xs
               | otherwise = []
 
 -- Data Types ---------------------------------------------------------------------------------------------------------
-
 -- Type: Houses
 data House = House { presents :: Int } deriving (Show)
 
@@ -64,7 +63,7 @@ incPresents (House p) = House (p + 1)
 makeHouse :: House
 makeHouse = House 0
 
--- Type Synonym: Coords -------------------------------------------------------------------------------------------------------
+-- Type Synonym: Coords -----------------------------------------------------------------------------------------------
 type Coords = (Int, Int)
 
 -- Construtor
