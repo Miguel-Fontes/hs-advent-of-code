@@ -7,7 +7,7 @@ import Data.List
 delivery :: IO()
 delivery = do
     input <- readFile "delivery-directions.txt"
-    let startingPoint = Point (Coords (0, 0)) (House 1)
+    let startingPoint = makePoint (0, 0) (House 1)
         grid = makeGrid startingPoint
         presentsGrid = dropPresents startingPoint grid input
     putStrLn $ show (countValues presentsGrid)
@@ -16,7 +16,7 @@ delivery = do
 robotDelivery :: IO()
 robotDelivery = do
     input <- readFile "delivery-directions.txt"
-    let startingPoint = Point (Coords (0, 0)) (House 1)
+    let startingPoint = makePoint (0, 0) (House 1)
         grid = makeGrid startingPoint
         santaInput = splitDirections 0 input -- 0 para começar do zero
         robotInput = splitDirections 1 input -- 1 para começar do um
@@ -32,7 +32,7 @@ robotDelivery = do
 dropPresents :: Point House -> Grid House -> String -> Grid House
 dropPresents _ g [] = g
 dropPresents currPoint g (x:xs) = dropPresents destination updatedGrid xs
-    where destination = EmptyPoint (moveTo x $ getCoords currPoint)
+    where destination = Point (moveTo x $ getCoords currPoint) Nothing
           updatedGrid = updatePosition destination incPresents g
 
 -- moveTo => Faz a aritmética de movimentação dentro do Grid utilizando as tuplas
@@ -93,41 +93,33 @@ coordExists point (Grid xs) = foldl (\acc x -> if x == point then True else acc)
 updatePosition :: Point a -> (a -> a) -> Grid a -> Grid a
 updatePosition point f (Grid xs)
     | coordExists point (Grid xs) = Grid $ foldl (\acc x -> if x == point
-                                                            then makePoint (getCoords point) (f <$> getValue x) : acc
+                                                            then Point (getCoords point) (f <$> getValue x) : acc
                                                             else x : acc) [] xs
-    | otherwise = updatePosition point f (Grid $ EmptyPoint (getCoords point) : xs)
+    | otherwise = updatePosition point f (Grid $ Point (getCoords point) Nothing : xs)
 
 -- Type: Point --------------------------------------------------------------------------------------------------------
-data Point a = Point Coords a | EmptyPoint Coords deriving (Show)
+data Point a = Point Coords (Maybe a) deriving (Show)
 
 -- Typeclasses
 instance Eq (Point a) where
     Point (Coords a) _ == Point (Coords b) _ = a == b
-    EmptyPoint (Coords a) == EmptyPoint (Coords b) = a == b
-
-    EmptyPoint (Coords a) == Point (Coords b) _ = a == b
-    Point (Coords a) _ == EmptyPoint (Coords b) = a == b
 
 -- Constructor
-makePoint :: Coords -> Maybe a -> Point a
-makePoint coords (Just z) = Point coords z
-makePoint coords Nothing = EmptyPoint coords
+makePoint :: (Int, Int) -> a -> Point a
+makePoint coords a = Point (Coords coords) (Just a)
 
 -- Selectors
 getCoords :: Point a -> Coords
 getCoords (Point coords _) = coords
-getCoords (EmptyPoint coords) = coords
 
 getValue :: Point a -> Maybe a
-getValue (Point _ a) = Just a
-getValue (EmptyPoint _) = Nothing
+getValue (Point _ a) = a
 
 -- Type Synonym: Coords -----------------------------------------------------------------------------------------------
-data Coords = Coords (Int, Int) deriving (Show)
+data Coords = Coords (Int, Int)
 
--- Construtor
-makeCoords :: Int -> Int -> Coords
-makeCoords x y = Coords (x,y)
+instance Show (Coords) where
+    show (Coords (a,b)) = "(" ++ show a ++ "," ++ show b ++ ")"
 
 -- Selectors
 getX :: Coords -> Int
