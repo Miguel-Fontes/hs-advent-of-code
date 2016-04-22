@@ -52,6 +52,15 @@ splitDirections n xs
               | n < length xs = (xs !! n) : splitDirections (n+2) (xs)
               | otherwise = []
 
+-- Data Types ---------------------------------------------------------------------------------------------------------
+
+-- Type: Houses -------------------------------------------------------------------------------------------------------
+data House = House { presents :: Int } deriving (Show)
+
+-- Operations
+incPresents :: House -> House
+incPresents (House p) = House (p + 1)
+
 -- Type: Grid ---------------------------------------------------------------------------------------------------------
 data Grid a = Grid [Point a] deriving (Show)
 
@@ -139,11 +148,3 @@ incY (Coords (x,y)) = Coords (x, y + 1)
 
 decY :: Coords -> Coords
 decY (Coords (x,y)) = Coords (x, y - 1)
-
--- Data Types ---------------------------------------------------------------------------------------------------------
--- Type: Houses
-data House = House { presents :: Int } deriving (Show)
-
--- Operations
-incPresents :: House -> House
-incPresents (House p) = House (p + 1)
