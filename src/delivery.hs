@@ -7,7 +7,7 @@ import Data.List
 delivery :: IO()
 delivery = do
     input <- readFile "delivery-directions.txt"
-    let startingPoint = makePoint (0, 0) (House 1)
+    let startingPoint = Point (Coords (0, 0)) (House 1)
         grid = makeGrid startingPoint
         presentsGrid = dropPresents startingPoint grid input
     putStrLn $ show (countValues presentsGrid)
@@ -16,7 +16,7 @@ delivery = do
 robotDelivery :: IO()
 robotDelivery = do
     input <- readFile "delivery-directions.txt"
-    let startingPoint = makePoint (0, 0) (House 1)
+    let startingPoint = Point (Coords (0, 0)) (House 1)
         grid = makeGrid startingPoint
         santaInput = splitDirections 0 input -- 0 para começar do zero
         robotInput = splitDirections 1 input -- 1 para começar do um
@@ -32,8 +32,8 @@ robotDelivery = do
 dropPresents :: Point House -> Grid House -> String -> Grid House
 dropPresents _ g [] = g
 dropPresents currPoint g (x:xs) = dropPresents destination updatedGrid xs
-    where destination = makePoint (moveTo x (getCoords currPoint)) makeHouse
-          updatedGrid = updateValue destination incPresents makeHouse g
+    where destination = EmptyPoint (moveTo x $ getCoords currPoint)
+          updatedGrid = updatePosition destination incPresents g
 
 -- moveTo => Faz a aritmética de movimentação dentro do Grid utilizando as tuplas
 -- up = (x, y+1) | down = (x, y-1) | left = (x-1, y) | right = (x+1, y)
@@ -53,61 +53,13 @@ splitDirections n xs
               | otherwise = []
 
 -- Data Types ---------------------------------------------------------------------------------------------------------
--- Type: Houses
+
+-- Type: Houses -------------------------------------------------------------------------------------------------------
 data House = House { presents :: Int } deriving (Show)
 
 -- Operations
 incPresents :: House -> House
 incPresents (House p) = House (p + 1)
-
-makeHouse :: House
-makeHouse = House 0
-
--- Type Synonym: Coords -----------------------------------------------------------------------------------------------
-type Coords = (Int, Int)
-
--- Construtor
-makeCoords :: Int -> Int -> Coords
-makeCoords x y = (x,y)
-
--- Selectors
-getX :: Coords -> Int
-getX coords = fst coords
-
-getY :: Coords -> Int
-getY coords = snd coords
-
--- Operations
-incX :: Coords -> Coords
-incX coords = (getX coords + 1, getY coords)
-
-decX :: Coords -> Coords
-decX coords = (getX coords - 1, getY coords)
-
-incY :: Coords -> Coords
-incY coords = (getX coords, getY coords + 1)
-
-decY :: Coords -> Coords
-decY coords = (getX coords, getY coords - 1)
-
--- Type: Point --------------------------------------------------------------------------------------------------------
-data Point a = Point (Coords, a) deriving (Show)
-
--- Typeclasses
-instance Eq (Point a) where
-    Point (a, _) == Point (b, _) = a == b
-
--- Constructor
-makePoint :: Coords -> a -> Point a
-makePoint (x, y) z = Point ((x,y), z)
-
--- Selectors
-getCoords :: Point a -> Coords
-getCoords (Point (coords, _)) = coords
-
-getValue :: Point a -> a
-getValue (Point (_, a)) = a
-
 
 -- Type: Grid ---------------------------------------------------------------------------------------------------------
 data Grid a = Grid [Point a] deriving (Show)
@@ -138,9 +90,61 @@ mergeGrids (Grid ga) (Grid gb) = Grid $ union ga gb
 coordExists :: Point a -> Grid a -> Bool
 coordExists point (Grid xs) = foldl (\acc x -> if x == point then True else acc) False xs
 
-updateValue :: Point a -> (a -> a) -> a -> Grid a -> Grid a
-updateValue point f valConstructor (Grid xs)
+updatePosition :: Point a -> (a -> a) -> Grid a -> Grid a
+updatePosition point f (Grid xs)
     | coordExists point (Grid xs) = Grid $ foldl (\acc x -> if x == point
-                                                            then makePoint (getCoords point) (f $ getValue x) : acc
+                                                            then makePoint (getCoords point) (f <$> getValue x) : acc
                                                             else x : acc) [] xs
-    | otherwise = updateValue point f valConstructor (Grid $ makePoint (getCoords point) valConstructor : xs)
+    | otherwise = updatePosition point f (Grid $ EmptyPoint (getCoords point) : xs)
+
+-- Type: Point --------------------------------------------------------------------------------------------------------
+data Point a = Point Coords a | EmptyPoint Coords deriving (Show)
+
+-- Typeclasses
+instance Eq (Point a) where
+    Point (Coords a) _ == Point (Coords b) _ = a == b
+    EmptyPoint (Coords a) == EmptyPoint (Coords b) = a == b
+
+    EmptyPoint (Coords a) == Point (Coords b) _ = a == b
+    Point (Coords a) _ == EmptyPoint (Coords b) = a == b
+
+-- Constructor
+makePoint :: Coords -> Maybe a -> Point a
+makePoint coords (Just z) = Point coords z
+makePoint coords Nothing = EmptyPoint coords
+
+-- Selectors
+getCoords :: Point a -> Coords
+getCoords (Point coords _) = coords
+getCoords (EmptyPoint coords) = coords
+
+getValue :: Point a -> Maybe a
+getValue (Point _ a) = Just a
+getValue (EmptyPoint _) = Nothing
+
+-- Type Synonym: Coords -----------------------------------------------------------------------------------------------
+data Coords = Coords (Int, Int) deriving (Show)
+
+-- Construtor
+makeCoords :: Int -> Int -> Coords
+makeCoords x y = Coords (x,y)
+
+-- Selectors
+getX :: Coords -> Int
+getX (Coords (x, _)) = x
+
+getY :: Coords -> Int
+getY (Coords (_, y)) = y
+
+-- Operations
+incX :: Coords -> Coords
+incX (Coords (x,y)) = Coords (x + 1, y)
+
+decX :: Coords -> Coords
+decX (Coords (x,y)) = Coords (x - 1, y)
+
+incY :: Coords -> Coords
+incY (Coords (x,y)) = Coords (x, y + 1)
+
+decY :: Coords -> Coords
+decY (Coords (x,y)) = Coords (x, y - 1)
