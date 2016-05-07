@@ -4,7 +4,7 @@ Soluções para os desafios propostos em [Advent of Code](http://adventofcode.co
 - 1 - **
 - 2 - **
 - 3 - **
-- 4
+- 4 - **
 - 5
 - 6
 - 7
