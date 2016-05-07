@@ -18,31 +18,36 @@ noNastyWords :: String -> Bool
 noNastyWords xs = not $ any (\nw -> nw `isInfixOf` xs) nastyWords
     where nastyWords = ["ab", "cd", "pq", "xy"]
 
-
 nonOverlappingPairs :: String -> Bool
-nonOverlappingPairs xs = False
+nonOverlappingPairs [x] = False
+nonOverlappingPairs (x:y:[]) = False
+nonOverlappingPairs (x:y:xs)
+    | [x,y] `elem` xsPairs = True
+    | otherwise = nonOverlappingPairs (y:xs)
+    where xsPairs = breakEach 2 xs
 
-intercalateRepetition :: String -> Bool
-intercalateRepetition xs = False
+intercalatedRepetition :: String -> Bool
+intercalatedRepetition (x:_:y:[]) = x == y
+intercalatedRepetition (x:z:y:xs) | x == y = True | otherwise = intercalatedRepetition (z:y:xs)
+intercalatedRepetition _ = False
 
-{-
-    It contains a pair of any two letters that appears at least twice in the string without overlapping, like xyxy (xy) or aabcdefgaa (aa), but not like aaa (aa, but it overlaps).
-
-    It contains at least one letter which repeats with exactly one letter between them, like xyx, abcdefeghi (efe), or even aaa.
--}
+breakEach :: Int -> [a] -> [[a]]
+breakEach _ [] = []
+breakEach _ [x] = []
+breakEach n (x:y:xs) = [x,y] : breakEach n (y:xs)
 
 main :: IO()
 main = do
     strings <- liftM lines (readFile "naughty-nice-input.txt")
     let criterias = [atLeast3Vowels, containRepeatedLetter, noNastyWords]
-    let criterias2 = [nonOverlappingPairs, intercalateRepetition]
+    let criterias2 = [nonOverlappingPairs, intercalatedRepetition]
     result <- return $ strings >>= (\s -> [all (\c -> c s) criterias])
     result2 <- return $ strings >>= (\s -> [all (\c -> c s) criterias2])
-    putStrLn "--- Part One ------------------------------------------------------------"
+    putStrLn "--- Part One -----------------------------------"
     putStrLn $ "Total messages: " ++ show (length result)
     putStrLn $ "Naughty ones: " ++ show (length $ filter (==False) result)
     putStrLn $ "Nice ones: " ++ show (length $ filter (==True) result)
-    putStrLn "--- Part Two ------------------------------------------------------------"
+    putStrLn "--- Part Two -----------------------------------"
     putStrLn $ "Total messages: " ++ show (length result2)
     putStrLn $ "Naughty ones: " ++ show (length $ filter (==False) result2)
     putStrLn $ "Nice ones: " ++ show (length $ filter (==True) result2)
