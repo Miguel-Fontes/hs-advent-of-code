@@ -9,7 +9,7 @@ md5Gen = show . M.md5 . B.pack
 
 main :: IO()
 main = do
-    pattern <- putStrLn "Insert preffix for MD5 Hash Search" >> getLine
+    pattern <- putStrLn "Insert prefix for MD5 Hash Search" >> getLine
     let inputList = sequenceInput "bgvyzdsv"
         result = head $ dropWhile (\x -> (take (length pattern) $ md5Gen x) /= pattern) inputList
     putStrLn $ show result
