@@ -1,5 +1,6 @@
 import Control.Monad
 import Data.List
+import qualified Data.Text as T
 
 -----------------------------------------------------------------------------------------------------------------------
 type Coordinates = (Int, Int)
@@ -58,13 +59,69 @@ getValue :: Point a -> a
 getValue (Point _ a) = a
 
 -----------------------------------------------------------------------------------------------------------------------
-processInput :: [String] -> [String]
-processInput = map (unwords . filter (/="through") . words)
+data Instruction = Instruction String (Int, Int) (Int, Int)
+                 | Operation String
+                 | Coord (Int, Int)
+                 | Empty
+                   deriving (Read, Show)
 
-dispatcher :: [String]
-dispatcher = undefined
+getCoordFrom :: Instruction -> (Int, Int)
+getCoordFrom (Instruction _ x _) = x
+
+getCoordTo :: Instruction -> (Int, Int)
+getCoordTo (Instruction _ _ y) = y
+
+getOperation :: Instruction -> String
+getOperation (Instruction op _ _) = op
+
+processInput :: String -> [Instruction]
+processInput = map (buildInstruction . parseData . unwords . filter (/="through") . words ) . lines
+
+buildInstruction :: [Instruction] -> Instruction
+buildInstruction ((Operation op):(Coord x):(Coord y):[]) = Instruction op x y
+
+parseData :: String -> [Instruction]
+parseData [] = []
+parseData (x:xs)
+    | x `elem` ['0'..'9'] = let fileCoords = x : takeWhile (/=' ') xs
+                                strCoords = splitStringAt ',' fileCoords
+                            in  Coord (read (strCoords !! 0) :: Int, read (strCoords !! 1) :: Int )
+                                : parseData (drop (length fileCoords) xs)
+    | x `elem` ['a'..'z'] = let strOperation = rtrim $ (x : (takeWhile (\z -> not $ z `elem` ['0'..'9']) xs))
+                            in  Operation strOperation : parseData (drop (length strOperation) xs)
+    | x == ' ' = parseData xs
+    | x == ',' = parseData xs
+    | otherwise = Empty : parseData []
+
+
+executeInstructions :: [Instruction] -> Grid Light -> Grid Light
+executeInstructions [] g = g
+executeInstructions ((Instruction op x y):xs) g
+    | op == "turn on" = executeInstructions xs (turnOn x y g)
+    | op == "turn off" = executeInstructions xs (turnOff x y g)
+    | op == "toggle" = executeInstructions xs (toggle x y g)
+    | otherwise = error "Invalid instruction!"
 
 main :: IO()
 main = do
-    contents <- liftM lines $ readFile "millions-of-lights-instructions.txt"
-    putStrLn $ show (processInput $ take 1 contents)
+    contents <- readFile "millions-of-lights-instructions.txt"
+    instructions <- return (processInput contents)
+    let grid = makeGrid (1000,1000) Off
+        resultGrid = executeInstructions instructions grid
+        onLights = gridLength $ gridFilter (\x -> (getValue x) == On) resultGrid
+    putStrLn $ show (take 10 instructions)
+    putStrLn $ show onLights
+
+-- Helpers -- Separar em módulo
+splitStringAt :: Char -> String -> [String]
+splitStringAt p xs =
+    let break c
+            | c == p = ' '
+            | otherwise = c
+    in words $ map break xs
+
+rtrim :: String -> String
+rtrim [] = []
+rtrim xs
+    | last xs == ' ' = rtrim (reverse $ drop 1 (reverse xs))
+    | otherwise = xs
