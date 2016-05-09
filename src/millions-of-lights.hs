@@ -1,6 +1,5 @@
 import Control.Monad
 import Data.List
-import qualified Data.Text as T
 
 -----------------------------------------------------------------------------------------------------------------------
 type Coordinates = (Int, Int)
@@ -18,15 +17,9 @@ type Dimensions = (Int, Int)
 makeGrid :: Dimensions -> a -> Grid a
 makeGrid (maxX, maxY) t = Grid [ Point (x,y) t | x <- [0..maxX-1], y <- [0..maxY-1] ]
 
-turnOn :: Coordinates -> Coordinates -> Grid Light -> Grid Light
-turnOn a b (Grid g) = Grid $ union [ Point (x,y) On | x <- [getX a..getX b], y <- [getY a..getY b] ] g
-
-turnOff :: Coordinates -> Coordinates -> Grid Light -> Grid Light
-turnOff a b (Grid g) = Grid $ union [ Point (x,y) Off | x <- [getX a..getX b], y <- [getY a..getY b] ] g
-
-toggle :: Coordinates -> Coordinates -> Grid Light -> Grid Light
-toggle a b (Grid xs) = Grid $ foldl (\acc x -> if (getCoords x) `elem` pointsToToggle
-                                               then Point (getCoords x) (toggleLight $ getValue x) : acc
+updatePoint :: Coordinates -> Coordinates -> (Light -> Light) -> Grid Light -> Grid Light
+updatePoint a b f (Grid xs) = Grid $ foldl (\acc x -> if (getCoords x) `elem` pointsToToggle
+                                               then Point (getCoords x) (f $ getValue x) : acc
                                                else x : acc ) [] xs
     where pointsToToggle = [ (x,y) | x <- [getX a..getX b], y <- [getY a..getY b] ]
 
@@ -38,13 +31,6 @@ gridMap f (Grid g) = Grid $ map f g
 
 gridFilter :: (Point a -> Bool) -> Grid a -> Grid a
 gridFilter f (Grid g) = Grid $ filter f g
-
------------------------------------------------------------------------------------------------------------------------
-data Light = On | Off deriving (Show, Eq)
-
-toggleLight :: Light -> Light
-toggleLight On = Off
-toggleLight Off = On
 
 -----------------------------------------------------------------------------------------------------------------------
 data Point a = Point (Int, Int) a deriving (Show)
@@ -59,26 +45,28 @@ getValue :: Point a -> a
 getValue (Point _ a) = a
 
 -----------------------------------------------------------------------------------------------------------------------
+data Light = On | Off deriving (Show, Eq)
+
+toggleLight, turnLightOn, turnLightOff :: Light -> Light
+toggleLight On = Off
+toggleLight Off = On
+
+turnLightOn _ = On
+
+turnLightOff _ = Off
+
+-----------------------------------------------------------------------------------------------------------------------
 data Instruction = Instruction String (Int, Int) (Int, Int)
                  | Operation String
                  | Coord (Int, Int)
                  | Empty
                    deriving (Read, Show)
 
-getCoordFrom :: Instruction -> (Int, Int)
-getCoordFrom (Instruction _ x _) = x
-
-getCoordTo :: Instruction -> (Int, Int)
-getCoordTo (Instruction _ _ y) = y
-
-getOperation :: Instruction -> String
-getOperation (Instruction op _ _) = op
-
 processInput :: String -> [Instruction]
-processInput = map (buildInstruction . parseData . unwords . filter (/="through") . words ) . lines
+processInput = map (makeInstruction . parseData . unwords . filter (/="through") . words ) . lines
 
-buildInstruction :: [Instruction] -> Instruction
-buildInstruction ((Operation op):(Coord x):(Coord y):[]) = Instruction op x y
+makeInstruction :: [Instruction] -> Instruction
+makeInstruction ((Operation op):(Coord x):(Coord y):[]) = Instruction op x y
 
 parseData :: String -> [Instruction]
 parseData [] = []
@@ -97,19 +85,18 @@ parseData (x:xs)
 executeInstructions :: [Instruction] -> Grid Light -> Grid Light
 executeInstructions [] g = g
 executeInstructions ((Instruction op x y):xs) g
-    | op == "turn on" = executeInstructions xs (turnOn x y g)
-    | op == "turn off" = executeInstructions xs (turnOff x y g)
-    | op == "toggle" = executeInstructions xs (toggle x y g)
+    | op == "turn on" = executeInstructions xs (updatePoint x y turnLightOn g)
+    | op == "turn off" = executeInstructions xs (updatePoint x y turnLightOff g)
+    | op == "toggle" = executeInstructions xs (updatePoint x y toggleLight g)
     | otherwise = error "Invalid instruction!"
 
 main :: IO()
 main = do
     contents <- readFile "millions-of-lights-instructions.txt"
     instructions <- return (processInput contents)
-    let grid = makeGrid (1000,1000) Off
-        resultGrid = executeInstructions instructions grid
+    let grid = makeGrid (100,100) Off
+        resultGrid = executeInstructions (take 10 instructions) grid
         onLights = gridLength $ gridFilter (\x -> (getValue x) == On) resultGrid
-    putStrLn $ show (take 10 instructions)
     putStrLn $ show onLights
 
 -- Helpers -- Separar em módulo
@@ -125,3 +112,6 @@ rtrim [] = []
 rtrim xs
     | last xs == ' ' = rtrim (reverse $ drop 1 (reverse xs))
     | otherwise = xs
+
+trim :: String -> String
+trim = reverse . foldr (\x acc -> if x == ' ' then acc else x : acc) []
