@@ -54,7 +54,8 @@ main = do
     contents <- readFile "millions-of-lights-instructions.txt"
     instructions <- return (processInput contents)
     let grid = makeMapGrid (1000,1000) Off
-        resultGrid = executeInstructions (take 3 instructions) grid
+        resultGrid = executeInstructions (take 1 instructions) grid
+        --resultGrid = executeInstructions instructions grid
         onLights = mapCount (==On) resultGrid
     putStrLn $ show onLights
 

@@ -11,7 +11,7 @@ module BidimensionalMap
     )
 where
 
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Control.Monad
 import Data.List
 
@@ -42,9 +42,14 @@ getRow x xs
     | otherwise = []
 
 updateRange :: Coordinates -> Coordinates -> (a -> a) -> Map.Map Int [(Int, a)] -> Map.Map Int [(Int, a)]
-updateRange a b f m = foldl' (\acc x -> updateValue x f acc) m pointsToChange
+updateRange a b f m = Map.fromList $ foldl' (\acc x -> updateValue' x f acc) (Map.toList m) pointsToChange
     where pointsToChange = [ (x,y) | x <- [getX a..getX b], y <- [getY a..getY b] ]
 
+updateValue' :: Coordinates -> (a -> a) -> [(Int, [(Int, a)])] -> [(Int, [(Int, a)])]
+updateValue' (x,y) f m = foldl' step [] m
+    where step ks k
+              | fst k == x = (fst k, updateRow y f (snd k)) : ks
+              | otherwise = k : ks
 
 updateValue :: Coordinates -> (a -> a) -> Map.Map Int [(Int, a)] -> Map.Map Int [(Int, a)]
 updateValue (x,y) f m = Map.fromList $ Map.foldrWithKey step [] m
