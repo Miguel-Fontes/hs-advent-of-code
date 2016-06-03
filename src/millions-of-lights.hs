@@ -25,16 +25,16 @@ processInput :: String -> [Instruction]
 processInput = map (makeInstruction . parseData . unwords . filter (/="through") . words ) . lines
 
 makeInstruction :: [Instruction] -> Instruction
-makeInstruction ((Operation op):(Coord x):(Coord y):[]) = Instruction op x y
+makeInstruction [Operation op, Coord x, Coord y] = Instruction op x y
 
 parseData :: String -> [Instruction]
 parseData [] = []
 parseData (x:xs)
     | x `elem` ['0'..'9'] = let fileCoords = x : takeWhile (/=' ') xs
                                 strCoords = splitStringAt ',' fileCoords
-                            in  Coord (read (strCoords !! 0) :: Int, read (strCoords !! 1) :: Int )
+                            in  Coord (read (head strCoords) :: Int, read (strCoords !! 1) :: Int )
                                 : parseData (drop (length fileCoords) xs)
-    | x `elem` ['a'..'z'] = let strOperation = rtrim $ (x : (takeWhile (\z -> not $ z `elem` ['0'..'9']) xs))
+    | x `elem` ['a'..'z'] = let strOperation = rtrim (x : takeWhile (\ z -> z `notElem` ['0' .. '9']) xs)
                             in  Operation strOperation : parseData (drop (length strOperation) xs)
     | x == ' ' = parseData xs
     | x == ',' = parseData xs
@@ -43,7 +43,7 @@ parseData (x:xs)
 
 executeInstructions :: [Instruction] -> Map.Map Int [(Int, Light)] -> Map.Map Int [(Int, Light)]
 executeInstructions [] g = g
-executeInstructions ((Instruction op x y):xs) g
+executeInstructions (Instruction op x y : xs) g
     | op == "turn on" = executeInstructions xs (updateRange x y turnLightOn g)
     | op == "turn off" = executeInstructions xs (updateRange x y turnLightOff g)
     | op == "toggle" = executeInstructions xs (updateRange x y toggleLight g)
@@ -52,12 +52,12 @@ executeInstructions ((Instruction op x y):xs) g
 main :: IO()
 main = do
     contents <- readFile "millions-of-lights-instructions.txt"
-    instructions <- return (processInput contents)
-    let grid = makeMapGrid (1000,1000) Off
-        resultGrid = executeInstructions (take 1 instructions) grid
+    let instructions = processInput contents
+        grid = makeMapGrid (1000,1000) Off
+        resultGrid = executeInstructions (take 10 instructions) grid
         --resultGrid = executeInstructions instructions grid
         onLights = mapCount (==On) resultGrid
-    putStrLn $ show onLights
+    print onLights
 
 -- Helpers -- Separar em módulo
 splitStringAt :: Char -> String -> [String]
