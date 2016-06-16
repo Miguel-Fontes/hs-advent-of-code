@@ -1,29 +1,23 @@
 module Matchsticks where
 
-import Data.Text.Encoding
-import qualified Data.ByteString.Char8 as B
-
 main = do
-    file <- fmap (map (\x -> (memoryLength x, literalLength x)) . lines) (readFile "Matchsticks-input.txt")
-    let uzp = unzip file
-        mem = sum $ fst uzp
-        lit = sum $ snd uzp
-    print (take 1 file)
-    print (mem - lit)
+    file <- readFile "Matchsticks-input.txt"
 
+    let result =  (sum . map memToLiteralDiff . lines) file
+
+    print $ (sum . map memToLiteralDiff . lines) file
+
+memToLiteralDiff :: String -> Int
+memToLiteralDiff s = memoryLength s - literalLength s
 
 memoryLength :: String -> Int
-memoryLength = length
+memoryLength = ((+2) . length)
 
 literalLength :: String -> Int
-literalLength = length . removeScapes
-
-removeScapes :: String -> String
-removeScapes [] = []
-removeScapes (x:xs)
+literalLength [] = 0
+literalLength (x:xs)
     | x == '\\' = case head xs of
-                    '\\' -> '\\' : removeScapes (tail xs)
-                    'x' -> 'x' : removeScapes (drop 3 xs)
-                    '"' -> '"' : removeScapes (tail xs)
-                    x -> x : removeScapes (drop 1 xs)
-    | otherwise = x : removeScapes xs
+                      '\\' -> 1 + literalLength (tail xs)
+                      'x' -> 1 + literalLength (drop 3 xs)
+                      '"' -> 1 + literalLength (tail xs)
+    | otherwise = 1 + literalLength xs
