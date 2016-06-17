@@ -8,7 +8,7 @@ Soluções para os desafios propostos em [Advent of Code](http://adventofcode.co
 - 5 - **
 - 6
 - 7
-- 8
+- 8 - *
 - 9
 - 10 - **
 - 11
